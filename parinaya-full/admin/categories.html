@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Categories — Parinaya Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css"/>
+</head>
+<body>
+<div class="app" id="app"></div>
+<div id="toast"></div>
+
+<!-- Add / Edit Modal -->
+<div class="modal-overlay hidden" id="cat-modal">
+  <div class="modal">
+    <h3 id="modal-title">Add Category</h3>
+    <div class="form-group">
+      <label>Category Name <span style="color:var(--error)">*</span></label>
+      <input type="text" id="m-name" placeholder="e.g. Marble Paintings"/>
+    </div>
+    <div class="form-group">
+      <label>Description <span class="label-hint">(shown on collection page)</span></label>
+      <textarea id="m-desc" rows="2" placeholder="Brief description of this category…"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Sort Order <span class="label-hint">(lower = appears first in menus)</span></label>
+      <input type="number" id="m-sort" value="0" min="0" style="width:100px"/>
+    </div>
+    <div class="form-group">
+      <label>Active (visible on site)</label>
+      <div class="toggle-group">
+        <label class="toggle"><input type="checkbox" id="m-active" checked/><span class="toggle-slider"></span></label>
+        <span>Yes</span>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="modal-save" onclick="saveCategory()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="/admin/js/admin.js"></script>
+<script src="/admin/js/sidebar.js"></script>
+<script>
+let cats = [];
+let editId = null;
+
+async function init() {
+  const me = await requireAuth();
+  if (!me) return;
+
+  document.getElementById('app').innerHTML = `
+    ${renderSidebar()}
+    <div class="main">
+      <div class="topbar">
+        <span class="topbar-title">Categories</span>
+        <button class="btn btn-primary" onclick="openModal()">${icon('plus')} Add Category</button>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div class="card-header">
+            <h2>All Categories</h2>
+            <span class="text-muted" style="font-size:12px">Adding a new category makes it available on the frontend immediately.</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Name</th>
+                <th>Slug</th>
+                <th>Description</th>
+                <th>Products</th>
+                <th>Order</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr></thead>
+              <tbody id="tbody">
+                <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink-light)">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  setActiveNav();
+  await load();
+}
+
+async function load() {
+  try {
+    cats = await API.get('/categories/admin/all');
+    render();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+function render() {
+  const tbody = document.getElementById('tbody');
+  if (!cats.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📂</div><p>No categories yet. Add one!</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = cats.map(c => `
+    <tr>
+      <td><strong>${escHtml(c.name)}</strong></td>
+      <td><code style="font-size:12px;color:var(--ink-light)">${escHtml(c.slug)}</code></td>
+      <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(c.description || '—')}</td>
+      <td><span class="badge badge-grey">${c.product_count}</span></td>
+      <td>${c.sort_order}</td>
+      <td>${c.active ? '<span class="badge badge-green">Active</span>' : '<span class="badge badge-grey">Hidden</span>'}</td>
+      <td>
+        <div class="flex gap-2">
+          <button class="btn btn-outline btn-sm btn-icon" title="Edit" onclick="openModal(${c.id})">${icon('edit')}</button>
+          <button class="btn btn-ghost btn-sm btn-icon" title="Delete" onclick="deleteCat(${c.id}, '${escHtml(c.name)}', ${c.product_count})">${icon('trash')}</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function openModal(id = null) {
+  editId = id;
+  const cat = id ? cats.find(c => c.id === id) : null;
+  document.getElementById('modal-title').textContent = id ? 'Edit Category' : 'Add Category';
+  document.getElementById('m-name').value  = cat?.name        || '';
+  document.getElementById('m-desc').value  = cat?.description || '';
+  document.getElementById('m-sort').value  = cat?.sort_order  ?? 0;
+  document.getElementById('m-active').checked = cat ? cat.active : true;
+  document.getElementById('cat-modal').classList.remove('hidden');
+  document.getElementById('m-name').focus();
+}
+
+function closeModal() {
+  document.getElementById('cat-modal').classList.add('hidden');
+  editId = null;
+}
+
+async function saveCategory() {
+  const name   = document.getElementById('m-name').value.trim();
+  const desc   = document.getElementById('m-desc').value.trim();
+  const sort   = parseInt(document.getElementById('m-sort').value) || 0;
+  const active = document.getElementById('m-active').checked;
+
+  if (!name) { toast('Category name is required', 'error'); return; }
+
+  const btn = document.getElementById('modal-save');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    if (editId) {
+      await API.put(`/categories/${editId}`, { name, description: desc, sort_order: sort, active });
+      toast('Category updated', 'success');
+    } else {
+      await API.post('/categories', { name, description: desc, sort_order: sort });
+      toast('Category created — it is now live on the frontend!', 'success');
+    }
+    closeModal();
+    await load();
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save';
+  }
+}
+
+async function deleteCat(id, name, productCount) {
+  if (productCount > 0) {
+    toast(`Cannot delete: ${productCount} product(s) are in this category. Re-assign them first.`, 'error', 4000);
+    return;
+  }
+  const ok = await confirm(`Delete category "${name}"?`);
+  if (!ok) return;
+  try {
+    await API.delete(`/categories/${id}`);
+    toast('Category deleted', 'success');
+    await load();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+// Close modal on overlay click
+document.addEventListener('click', e => {
+  if (e.target.id === 'cat-modal') closeModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter' && !document.getElementById('cat-modal').classList.contains('hidden')) saveCategory();
+});
+
+init();
+</script>
+</body>
+</html>

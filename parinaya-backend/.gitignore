@@ -1,0 +1,19 @@
+# RENAME THIS FILE TO .gitignore IN YOUR parinaya-backend/ FOLDER
+
+# Dependencies
+node_modules/
+
+# Environment — contains DB credentials, JWT secrets
+.env
+
+# Uploaded images — these live on the VPS, not in git
+uploads/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.DS_Store
+.vscode/
+.idea/

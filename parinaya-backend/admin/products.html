@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Products — Parinaya Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css"/>
+</head>
+<body>
+<div class="app" id="app"></div>
+<div id="toast"></div>
+<script src="/admin/js/admin.js"></script>
+<script src="/admin/js/sidebar.js"></script>
+<script>
+let allProducts = [];
+
+async function init() {
+  const me = await requireAuth();
+  if (!me) return;
+
+  document.getElementById('app').innerHTML = `
+    ${renderSidebar()}
+    <div class="main">
+      <div class="topbar">
+        <span class="topbar-title">Products</span>
+        <div class="flex gap-2">
+          <input type="text" id="search" placeholder="Search products…" style="width:220px" oninput="filterProducts()"/>
+          <select id="cat-filter" onchange="filterProducts()" style="width:180px">
+            <option value="">All Categories</option>
+          </select>
+          <a href="/admin/products/new" class="btn btn-primary">${icon('plus')} Add Product</a>
+        </div>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Image</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Stock</th>
+                <th>Status</th>
+                <th>Featured</th>
+                <th>Actions</th>
+              </tr></thead>
+              <tbody id="tbody">
+                <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--ink-light)">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  setActiveNav();
+  await loadData();
+}
+
+async function loadData() {
+  try {
+    const [products, cats] = await Promise.all([
+      API.get('/products/admin/all'),
+      API.get('/categories/admin/all'),
+    ]);
+    allProducts = products;
+
+    // Populate category filter
+    const catSel = document.getElementById('cat-filter');
+    cats.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name;
+      catSel.appendChild(opt);
+    });
+
+    renderTable(allProducts);
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+function filterProducts() {
+  const q      = document.getElementById('search').value.toLowerCase();
+  const catId  = document.getElementById('cat-filter').value;
+  const filtered = allProducts.filter(p => {
+    const matchQ   = !q || p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q);
+    const matchCat = !catId || String(p.category_id) === catId;
+    return matchQ && matchCat;
+  });
+  renderTable(filtered);
+}
+
+function renderTable(products) {
+  const tbody = document.getElementById('tbody');
+  if (!products.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📦</div><p>No products found.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = products.map(p => `
+    <tr>
+      <td>
+        <img class="product-thumb"
+          src="${p.images[0]?.url || ''}"
+          onerror="this.style.opacity='0'"
+          alt=""/>
+      </td>
+      <td>
+        <strong>${escHtml(p.name)}</strong><br/>
+        <span class="text-muted" style="font-size:11px">/${escHtml(p.slug)}</span>
+      </td>
+      <td>${escHtml(p.category_name || '—')}</td>
+      <td>${fmtPrice(p.price)}</td>
+      <td>${p.in_stock ? '<span class="badge badge-green">In Stock</span>' : '<span class="badge badge-red">Out</span>'}</td>
+      <td>${p.active ? '<span class="badge badge-green">Active</span>' : '<span class="badge badge-grey">Hidden</span>'}</td>
+      <td>${p.featured ? '<span class="badge badge-gold">★ Featured</span>' : '<span class="badge badge-grey">No</span>'}</td>
+      <td>
+        <div class="flex gap-2">
+          <a href="/admin/products/${p.id}" class="btn btn-outline btn-sm btn-icon" title="Edit">${icon('edit')}</a>
+          <button class="btn btn-ghost btn-sm btn-icon" title="Delete" onclick="deleteProduct(${p.id}, '${escHtml(p.name)}')">${icon('trash')}</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+async function deleteProduct(id, name) {
+  const ok = await confirm(`Delete "${name}"? This will permanently remove the product and all its images.`);
+  if (!ok) return;
+  try {
+    await API.delete(`/products/${id}`);
+    allProducts = allProducts.filter(p => p.id !== id);
+    filterProducts();
+    toast('Product deleted', 'success');
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+init();
+</script>
+</body>
+</html>

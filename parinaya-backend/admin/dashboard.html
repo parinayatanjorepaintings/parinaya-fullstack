@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dashboard — Parinaya Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css"/>
+</head>
+<body>
+<div class="app" id="app"></div>
+<div id="toast"></div>
+<script src="/admin/js/admin.js"></script>
+<script src="/admin/js/sidebar.js"></script>
+<script>
+async function init() {
+  const me = await requireAuth();
+  if (!me) return;
+
+  document.getElementById('app').innerHTML = `
+    ${renderSidebar()}
+    <div class="main">
+      <div class="topbar">
+        <span class="topbar-title">Dashboard</span>
+        <a href="/admin/products/new" class="btn btn-primary btn-sm">${icon('plus')} Add Product</a>
+      </div>
+      <div class="content">
+        <div class="stats-grid" id="stats">
+          <div class="stat-card"><div class="stat-label">Total Products</div><div class="stat-value" id="s-products">—</div></div>
+          <div class="stat-card"><div class="stat-label">Active Products</div><div class="stat-value" id="s-active">—</div></div>
+          <div class="stat-card"><div class="stat-label">Featured</div><div class="stat-value" id="s-featured">—</div></div>
+          <div class="stat-card"><div class="stat-label">Categories</div><div class="stat-value" id="s-cats">—</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Recent Products</h2>
+            <a href="/admin/products" class="btn btn-outline btn-sm">View All</a>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th>Actions</th>
+              </tr></thead>
+              <tbody id="recent-tbody"><tr><td colspan="6" class="text-muted" style="text-align:center;padding:32px">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  setActiveNav();
+
+  try {
+    const products = await API.get('/products/admin/all');
+    const cats     = await API.get('/categories/admin/all');
+
+    document.getElementById('s-products').textContent = products.length;
+    document.getElementById('s-active').textContent   = products.filter(p => p.active).length;
+    document.getElementById('s-featured').textContent = products.filter(p => p.featured).length;
+    document.getElementById('s-cats').textContent     = cats.length;
+
+    const recent = products.slice(0, 8);
+    document.getElementById('recent-tbody').innerHTML = recent.length
+      ? recent.map(p => `
+        <tr>
+          <td><img class="product-thumb" src="${p.images[0]?.url || ''}" onerror="this.style.display='none'" alt=""/></td>
+          <td><strong>${escHtml(p.name)}</strong></td>
+          <td>${escHtml(p.category_name || '—')}</td>
+          <td>${fmtPrice(p.price)}</td>
+          <td>
+            ${p.active ? '<span class="badge badge-green">Active</span>' : '<span class="badge badge-grey">Hidden</span>'}
+            ${p.featured ? '<span class="badge badge-gold" style="margin-left:4px">Featured</span>' : ''}
+          </td>
+          <td><a href="/admin/products/${p.id}" class="btn btn-outline btn-sm">${icon('edit')} Edit</a></td>
+        </tr>`).join('')
+      : '<tr><td colspan="6" class="text-muted" style="text-align:center;padding:32px">No products yet.</td></tr>';
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+init();
+</script>
+</body>
+</html>
