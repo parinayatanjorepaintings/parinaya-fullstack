@@ -58,6 +58,17 @@ async function init() {
       created_at  TIMESTAMPTZ DEFAULT NOW()
     );
 
+    -- ─── YouTube Videos ──────────────────────────────────────────
+    -- Multiple videos for the homepage video slider, managed in admin
+    CREATE TABLE IF NOT EXISTS youtube_videos (
+      id          SERIAL PRIMARY KEY,
+      url         TEXT NOT NULL,
+      title       TEXT,
+      sort_order  INT DEFAULT 0,
+      active      BOOLEAN DEFAULT TRUE,
+      created_at  TIMESTAMPTZ DEFAULT NOW()
+    );
+
     -- ─── Site Config ─────────────────────────────────────────────
     -- Key-value store so the admin can change any site text
     CREATE TABLE IF NOT EXISTS site_config (

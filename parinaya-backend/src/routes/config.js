@@ -41,8 +41,10 @@ router.put('/', requireAuth, async (req, res) => {
       await client.query('BEGIN');
       for (const [key, value] of Object.entries(updates)) {
         await client.query(
-          `UPDATE site_config SET value = $1 WHERE key = $2`,
-          [String(value), key]
+          `INSERT INTO site_config (key, value)
+           VALUES ($1, $2)
+           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+          [key, String(value)]
         );
       }
       await client.query('COMMIT');

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Videos — Parinaya Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css"/>
+</head>
+<body>
+<div class="app" id="app"></div>
+<div id="toast"></div>
+
+<!-- Add / Edit Modal -->
+<div class="modal-overlay hidden" id="vid-modal">
+  <div class="modal">
+    <h3 id="modal-title">Add Video</h3>
+    <div class="form-group">
+      <label>YouTube URL <span style="color:var(--error)">*</span></label>
+      <input type="text" id="m-url" placeholder="https://youtu.be/XXXXXXXXXXX" oninput="updatePreview()"/>
+      <div class="form-hint">Supports youtu.be links, youtube.com/watch, youtube.com/shorts</div>
+    </div>
+    <div class="form-group">
+      <label>Title <span class="label-hint">(optional, shown as caption)</span></label>
+      <input type="text" id="m-title" placeholder="e.g. Painting the gold leaf detail"/>
+    </div>
+    <div class="form-group">
+      <label>Sort Order <span class="label-hint">(lower = appears first in the slider)</span></label>
+      <input type="number" id="m-sort" value="0" min="0" style="width:100px"/>
+    </div>
+    <div class="form-group">
+      <label>Active (visible on site)</label>
+      <div class="toggle-group">
+        <label class="toggle"><input type="checkbox" id="m-active" checked/><span class="toggle-slider"></span></label>
+        <span>Yes</span>
+      </div>
+    </div>
+    <div id="m-preview-wrap" style="display:none;margin-top:8px">
+      <div style="font-size:12px;color:var(--ink-light);margin-bottom:6px">Preview:</div>
+      <img id="m-preview" style="width:100%;max-width:280px;border-radius:6px;border:1px solid var(--border)" alt="Video thumbnail"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="modal-save" onclick="saveVideo()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="/admin/js/admin.js"></script>
+<script src="/admin/js/sidebar.js"></script>
+<script>
+let videos = [];
+let editId = null;
+
+async function init() {
+  const me = await requireAuth();
+  if (!me) return;
+
+  document.getElementById('app').innerHTML = `
+    ${renderSidebar()}
+    <div class="main">
+      <div class="topbar">
+        <span class="topbar-title">Videos</span>
+        <button class="btn btn-primary" onclick="openModal()">${icon('plus')} Add Video</button>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div class="card-header">
+            <h2>Homepage Video Slider</h2>
+            <span class="text-muted" style="font-size:12px">These play as a slider in the "Watch" section on the homepage. Drag order with Sort Order.</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Thumbnail</th>
+                <th>Title</th>
+                <th>URL</th>
+                <th>Order</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr></thead>
+              <tbody id="tbody">
+                <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--ink-light)">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  setActiveNav();
+  await load();
+}
+
+function extractYtId(url = '') {
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+async function load() {
+  try {
+    videos = await API.get('/youtube-videos/admin');
+    render();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+function render() {
+  const tbody = document.getElementById('tbody');
+  if (!videos.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🎬</div><p>No videos yet. Add one to show the slider on the homepage.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = videos.map(v => {
+    const ytId = extractYtId(v.url);
+    const thumb = ytId
+      ? `<img src="https://img.youtube.com/vi/${ytId}/mqdefault.jpg" style="width:80px;height:45px;object-fit:cover;border-radius:4px" alt=""/>`
+      : '<span class="text-muted" style="font-size:11px">No preview</span>';
+    return `
+    <tr>
+      <td>${thumb}</td>
+      <td>${escHtml(v.title || '—')}</td>
+      <td><a href="${escHtml(v.url)}" target="_blank" style="font-size:12px;color:var(--ink-light)">${escHtml(v.url)}</a></td>
+      <td>${v.sort_order}</td>
+      <td>${v.active ? '<span class="badge badge-green">Active</span>' : '<span class="badge badge-grey">Hidden</span>'}</td>
+      <td>
+        <div class="flex gap-2">
+          <button class="btn btn-outline btn-sm btn-icon" title="Edit" onclick="openModal(${v.id})">${icon('edit')}</button>
+          <button class="btn btn-ghost btn-sm btn-icon" title="Delete" onclick="deleteVideo(${v.id}, '${escHtml((v.title || v.url).slice(0, 40))}')">${icon('trash')}</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openModal(id = null) {
+  editId = id;
+  const v = id ? videos.find(x => x.id === id) : null;
+  document.getElementById('modal-title').textContent = id ? 'Edit Video' : 'Add Video';
+  document.getElementById('m-url').value    = v?.url        || '';
+  document.getElementById('m-title').value  = v?.title      || '';
+  document.getElementById('m-sort').value   = v?.sort_order  ?? videos.length;
+  document.getElementById('m-active').checked = v ? v.active : true;
+  updatePreview();
+  document.getElementById('vid-modal').classList.remove('hidden');
+  document.getElementById('m-url').focus();
+}
+
+function closeModal() {
+  document.getElementById('vid-modal').classList.add('hidden');
+  editId = null;
+}
+
+function updatePreview() {
+  const url = document.getElementById('m-url').value;
+  const id = extractYtId(url);
+  const wrap = document.getElementById('m-preview-wrap');
+  const img = document.getElementById('m-preview');
+  if (id) {
+    img.src = `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
+    wrap.style.display = 'block';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+async function saveVideo() {
+  const url    = document.getElementById('m-url').value.trim();
+  const title  = document.getElementById('m-title').value.trim();
+  const sort   = parseInt(document.getElementById('m-sort').value) || 0;
+  const active = document.getElementById('m-active').checked;
+
+  if (!url) { toast('YouTube URL is required', 'error'); return; }
+  if (!extractYtId(url)) { toast('That doesn\'t look like a valid YouTube URL', 'error'); return; }
+
+  const btn = document.getElementById('modal-save');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    if (editId) {
+      await API.put(`/youtube-videos/${editId}`, { url, title, sort_order: sort, active });
+      toast('Video updated', 'success');
+    } else {
+      await API.post('/youtube-videos', { url, title, sort_order: sort });
+      toast('Video added — it is now live on the homepage!', 'success');
+    }
+    closeModal();
+    await load();
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save';
+  }
+}
+
+async function deleteVideo(id, label) {
+  const ok = await confirm(`Delete video "${label}"?`);
+  if (!ok) return;
+  try {
+    await API.delete(`/youtube-videos/${id}`);
+    toast('Video deleted', 'success');
+    await load();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+document.addEventListener('click', e => {
+  if (e.target.id === 'vid-modal') closeModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter' && !document.getElementById('vid-modal').classList.contains('hidden')) saveVideo();
+});
+
+init();
+</script>
+</body>
+</html>

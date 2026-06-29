@@ -14,7 +14,7 @@ router.post('/:key', requireAuth, upload.single('image'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
 
     const key = req.params.key;
-    const allowedKeys = ['hero_bg_image', 'story_image'];
+    const allowedKeys = ['hero_bg_image', 'hero_bg_image_mobile', 'story_image'];
     if (!allowedKeys.includes(key)) {
       return res.status(400).json({ error: 'Invalid image key' });
     }
@@ -28,11 +28,17 @@ router.post('/:key', requireAuth, upload.single('image'), async (req, res) => {
       if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
     }
 
+    const labels = {
+      hero_bg_image: 'Hero Background Image',
+      hero_bg_image_mobile: 'Hero Background Image (Mobile)',
+      story_image: 'Story Section Image',
+    };
+
     await pool.query(
       `INSERT INTO site_config (key, value, label, group_name)
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-      [key, filename, key === 'hero_bg_image' ? 'Hero Background Image' : 'Story Section Image', 'homepage']
+      [key, filename, labels[key], 'homepage']
     );
 
     const base = `${req.protocol}://${req.get('host')}`;

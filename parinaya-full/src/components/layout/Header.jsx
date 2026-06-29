@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, X, MessageCircle, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Menu, X, MessageCircle, ChevronDown, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
 import { useConfig } from '../../hooks/useConfig';
-import { getCategories, buildWhatsAppLink } from '../../services/api';
+import { getCategories, buildWhatsAppLink, buildWhatsAppLinkForCart } from '../../services/api';
+import { useCart } from '../../context/CartContext';
 import logo from '../../assets/logo.png';
 
 export default function Header() {
@@ -14,6 +15,13 @@ export default function Header() {
   const navRef = useRef(null);
   const scrollInterval = useRef(null);
   const { config } = useConfig();
+  const { items: cartItems, cartCount } = useCart();
+
+  const handleCartClick = useCallback(async () => {
+    if (!cartItems.length) return; // nothing added yet — no-op
+    const url = await buildWhatsAppLinkForCart(cartItems);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }, [cartItems]);
 
   useEffect(() => {
     getCategories().then(setCategories).catch(() => {});
@@ -114,6 +122,19 @@ export default function Header() {
             >
               <MessageCircle size={19} />
             </a>
+            <button
+              onClick={handleCartClick}
+              aria-label="Send enquiry for added products via WhatsApp"
+              title={cartCount ? 'Send your selected products via WhatsApp' : 'Add products to enquire via WhatsApp'}
+              className="relative p-2 hover:text-gold-dark transition-colors"
+            >
+              <ShoppingBag size={19} />
+              {cartCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-gold-dark text-paper text-[10px] font-semibold leading-none rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                  {cartCount}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
@@ -211,6 +232,13 @@ export default function Header() {
               ))}
               <Link to="/pages/contact" onClick={() => setMobileOpen(false)}
                 className="px-5 py-4 border-b border-line text-sm uppercase tracking-wide">Contact Us</Link>
+              <button
+                onClick={() => { setMobileOpen(false); handleCartClick(); }}
+                className="px-5 py-4 border-b border-line text-sm uppercase tracking-wide flex items-center gap-2 text-left w-full"
+              >
+                <ShoppingBag size={16} />
+                Send Enquiry ({cartCount} added)
+              </button>
               <a href={waHref} target="_blank" rel="noopener noreferrer"
                 className="px-5 py-4 text-sm uppercase tracking-wide flex items-center gap-2 text-gold-dark">
                 <MessageCircle size={16} /> Chat on WhatsApp

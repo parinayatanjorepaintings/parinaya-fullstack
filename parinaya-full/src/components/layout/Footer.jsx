@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin } from 'lucide-react';
-import { FacebookIcon, InstagramIcon } from '../ui/BrandIcons';
+import { FacebookIcon, InstagramIcon, YoutubeIcon } from '../ui/BrandIcons';
 import { useConfig } from '../../hooks/useConfig';
 import { getCategories } from '../../services/api';
 import logo from '../../assets/logo.png';
@@ -22,6 +22,7 @@ export default function Footer() {
   const address     = config.address      || 'Hafeezpet, Miyapur, Hyderabad, Telangana';
   const fbUrl       = config.facebook_url;
   const igUrl       = config.instagram_url;
+  const ytUrl       = config.youtube_channel_url;
 
   // Parse hours from config keys
   const hours = [
@@ -58,6 +59,12 @@ export default function Footer() {
                 <a href={igUrl} target="_blank" rel="noopener noreferrer"
                   aria-label="Instagram" className="text-paper/70 hover:text-gold transition-colors">
                   <InstagramIcon size={18} />
+                </a>
+              )}
+              {ytUrl && (
+                <a href={ytUrl} target="_blank" rel="noopener noreferrer"
+                  aria-label="YouTube" className="text-paper/70 hover:text-gold transition-colors">
+                  <YoutubeIcon size={18} />
                 </a>
               )}
             </div>

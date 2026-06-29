@@ -26,6 +26,23 @@ export async function buildWhatsAppLink(productName) {
   return `${base}?text=${text}`;
 }
 
+// Builds a WhatsApp link listing every item currently in the cart, e.g.:
+//   Hi, I'm interested in the following products:
+//   1. Lakshmi Tanjore Painting x2
+//   2. Brass Ganesha Idol x1
+//   Could you share more details?
+export async function buildWhatsAppLinkForCart(items) {
+  const cfg = await getSiteConfig();
+  const number = cfg.whatsapp_number || '917075703309';
+  const base = `https://wa.me/${number}`;
+  if (!items || !items.length) return base;
+
+  const lines = items.map((item, i) => `${i + 1}. ${item.name} x${item.qty}`);
+  const message = `Hi, I'm interested in the following products:\n${lines.join('\n')}\n\nCould you share more details?`;
+  const text = encodeURIComponent(message);
+  return `${base}?text=${text}`;
+}
+
 // ─── Categories ───────────────────────────────────────────────────────────────
 export async function getCategories() {
   return get('/api/categories');
@@ -50,4 +67,9 @@ export async function getProductById(id) {
 
 export async function getRelatedProducts(id) {
   return get(`/api/products/${id}/related`);
+}
+
+// ─── YouTube Videos ────────────────────────────────────────────────────────────
+export async function getYoutubeVideos() {
+  return get('/api/youtube-videos');
 }

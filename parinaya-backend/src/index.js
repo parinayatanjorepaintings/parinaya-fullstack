@@ -65,6 +65,7 @@ app.use('/api/categories', require('./routes/categories'));
 app.use('/api/products',   require('./routes/products'));
 app.use('/api/config',     require('./routes/config'));
 app.use('/api/siteimages', require('./routes/siteimages'));
+app.use('/api/youtube-videos', require('./routes/youtubeVideos'));
 
 // ─── Admin panel HTML routes ───────────────────────────────────────────────────
 // NOTE: these pages are intentionally NOT gated by requireSession here.
@@ -85,6 +86,7 @@ app.get('/admin/products',      (_req, res) => res.sendFile('products.html',    
 app.get('/admin/products/new',  (_req, res) => res.sendFile('product-form.html',{ root: adminDir }));
 app.get('/admin/products/:id',  (_req, res) => res.sendFile('product-form.html',{ root: adminDir }));
 app.get('/admin/categories',    (_req, res) => res.sendFile('categories.html',  { root: adminDir }));
+app.get('/admin/videos',        (_req, res) => res.sendFile('videos.html',      { root: adminDir }));
 app.get('/admin/settings',      (_req, res) => res.sendFile('settings.html',    { root: adminDir }));
 
 // ─── Health check ──────────────────────────────────────────────────────────────

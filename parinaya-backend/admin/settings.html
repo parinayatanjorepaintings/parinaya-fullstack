@@ -70,22 +70,39 @@ async function init() {
             <div class="card-body">
 
               <!-- Hero BG Image -->
-              <div class="form-group">
-                <label>Hero Background Image</label>
-                <div class="image-upload-box" id="hero-img-box" onclick="document.getElementById('hero-img-input').click()">
-                  <img id="hero-img-preview" class="preview-img" alt="Hero background preview"/>
-                  <div class="placeholder-text" id="hero-img-placeholder">
-                    <div style="font-size:28px;margin-bottom:6px">🖼️</div>
-                    Click to upload a background image for the hero section<br/>
-                    <span style="font-size:11px">JPEG / PNG / WebP • Max 10MB</span>
+              <div class="form-row cols-2">
+                <div class="form-group">
+                  <label>Hero Background Image <span class="label-hint">(desktop)</span></label>
+                  <div class="image-upload-box" id="hero-img-box" onclick="document.getElementById('hero-img-input').click()">
+                    <img id="hero-img-preview" class="preview-img" alt="Hero background preview"/>
+                    <div class="placeholder-text" id="hero-img-placeholder">
+                      <div style="font-size:28px;margin-bottom:6px">🖼️</div>
+                      Click to upload a background image<br/>
+                      <span style="font-size:11px">JPEG / PNG / WebP • Max 10MB</span>
+                    </div>
+                    <input type="file" id="hero-img-input" accept="image/jpeg,image/png,image/webp" onchange="uploadSiteImage('hero_bg_image', this)"/>
                   </div>
-                  <input type="file" id="hero-img-input" accept="image/jpeg,image/png,image/webp" onchange="uploadSiteImage('hero_bg_image', this)"/>
+                  <div class="img-actions" id="hero-img-actions" style="display:none">
+                    <button class="btn btn-outline btn-sm" onclick="document.getElementById('hero-img-input').click()">Replace</button>
+                    <button class="btn btn-danger btn-sm" onclick="removeSiteImage('hero_bg_image')">Remove</button>
+                  </div>
                 </div>
-                <div class="img-actions" id="hero-img-actions" style="display:none">
-                  <button class="btn btn-outline btn-sm" onclick="document.getElementById('hero-img-input').click()">Replace</button>
-                  <button class="btn btn-danger btn-sm" onclick="removeSiteImage('hero_bg_image')">Remove</button>
+                <div class="form-group">
+                  <label>Hero Background Image <span class="label-hint">(mobile)</span></label>
+                  <div class="image-upload-box" id="heromobile-img-box" onclick="document.getElementById('heromobile-img-input').click()">
+                    <img id="heromobile-img-preview" class="preview-img" alt="Mobile hero background preview"/>
+                    <div class="placeholder-text" id="heromobile-img-placeholder">
+                      <div style="font-size:28px;margin-bottom:6px">📱</div>
+                      Upload a tall/portrait image for mobile<br/>
+                      <span style="font-size:11px">Falls back to the desktop image if left empty</span>
+                    </div>
+                    <input type="file" id="heromobile-img-input" accept="image/jpeg,image/png,image/webp" onchange="uploadSiteImage('hero_bg_image_mobile', this)"/>
+                  </div>
+                  <div class="img-actions" id="heromobile-img-actions" style="display:none">
+                    <button class="btn btn-outline btn-sm" onclick="document.getElementById('heromobile-img-input').click()">Replace</button>
+                    <button class="btn btn-danger btn-sm" onclick="removeSiteImage('hero_bg_image_mobile')">Remove</button>
+                  </div>
                 </div>
-                <div class="form-hint">When set, text turns white and buttons use gold styling automatically.</div>
               </div>
 
               <div class="form-group">
@@ -127,10 +144,8 @@ async function init() {
           <div class="card mb-6">
             <div class="card-header"><h2>YouTube Video Section</h2></div>
             <div class="card-body">
-              <div class="form-group">
-                <label>YouTube URL <span class="label-hint">(paste full YouTube link — section hides if empty)</span></label>
-                <input type="text" data-key="youtube_url" placeholder="https://youtu.be/XMeQRjdU6GU"/>
-                <div class="form-hint">Supports youtu.be links, youtube.com/watch, youtube.com/shorts</div>
+              <div class="form-group" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px">
+                <span style="font-size:13px">🎬 The actual videos are managed on the <a href="/admin/videos" style="color:var(--maroon);font-weight:600">Videos</a> page — add as many as you like and they'll show as a slider here. The fields below only control the heading text above the slider.</span>
               </div>
               <div class="form-group">
                 <label>Section Title</label>
@@ -139,10 +154,6 @@ async function init() {
               <div class="form-group">
                 <label>Section Subtitle</label>
                 <input type="text" data-key="youtube_section_subtitle" placeholder="Watch how every Tanjore painting comes to life…"/>
-              </div>
-              <div id="yt-preview-wrap" style="margin-top:8px;display:none">
-                <div style="font-size:12px;color:var(--ink-light);margin-bottom:6px">Preview:</div>
-                <img id="yt-thumb" style="width:100%;max-width:360px;border-radius:6px;border:1px solid var(--border)" alt="YouTube thumbnail"/>
               </div>
             </div>
           </div>
@@ -291,6 +302,10 @@ async function init() {
                 <input type="text" data-key="instagram_url" placeholder="https://www.instagram.com/…"/>
               </div>
               <div class="form-group">
+                <label>YouTube Channel URL <span class="label-hint">(leave blank to hide)</span></label>
+                <input type="text" data-key="youtube_channel_url" placeholder="https://www.youtube.com/@yourchannel"/>
+              </div>
+              <div class="form-group">
                 <label>LinkedIn URL <span class="label-hint">(leave blank to hide)</span></label>
                 <input type="text" data-key="linkedin_url" placeholder="https://www.linkedin.com/…"/>
               </div>
@@ -371,11 +386,10 @@ async function loadConfig() {
 
     // Show existing hero bg image
     if (configMap.hero_bg_image) showImagePreview('hero', configMap.hero_bg_image);
+    // Show existing mobile hero bg image
+    if (configMap.hero_bg_image_mobile) showImagePreview('heromobile', configMap.hero_bg_image_mobile);
     // Show existing story image
     if (configMap.story_image) showImagePreview('story', configMap.story_image);
-
-    // YT preview
-    setupYtPreview();
   } catch (e) {
     toast('Failed to load settings: ' + e.message, 'error');
   }
@@ -402,10 +416,16 @@ function hideImagePreview(prefix) {
   if (actions) actions.style.display = 'none';
 }
 
+const KEY_PREFIX = {
+  hero_bg_image: 'hero',
+  hero_bg_image_mobile: 'heromobile',
+  story_image: 'story',
+};
+
 async function uploadSiteImage(key, input) {
   const file = input.files[0];
   if (!file) return;
-  const prefix = key === 'hero_bg_image' ? 'hero' : 'story';
+  const prefix = KEY_PREFIX[key] || key;
 
   // Show local preview immediately
   const reader = new FileReader();
@@ -434,7 +454,7 @@ async function uploadSiteImage(key, input) {
 }
 
 async function removeSiteImage(key) {
-  const prefix = key === 'hero_bg_image' ? 'hero' : 'story';
+  const prefix = KEY_PREFIX[key] || key;
   try {
     await API.delete(`/siteimages/${key}`);
     configMap[key] = '';
@@ -443,29 +463,6 @@ async function removeSiteImage(key) {
   } catch (e) {
     toast(e.message, 'error');
   }
-}
-
-function setupYtPreview() {
-  const input = document.querySelector('[data-key="youtube_url"]');
-  if (!input) return;
-  const update = () => {
-    const id = extractYtId(input.value);
-    const wrap = document.getElementById('yt-preview-wrap');
-    const thumb = document.getElementById('yt-thumb');
-    if (id) {
-      thumb.src = `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
-      wrap.style.display = 'block';
-    } else {
-      wrap.style.display = 'none';
-    }
-  };
-  input.addEventListener('input', update);
-  update();
-}
-
-function extractYtId(url = '') {
-  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
-  return m ? m[1] : null;
 }
 
 async function saveAll() {

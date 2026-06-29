@@ -4,10 +4,17 @@ import { useConfig } from '../../hooks/useConfig';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
+function resolveImg(value) {
+  if (!value) return null;
+  return value.startsWith('http') ? value : `${API_BASE}/uploads/${value}`;
+}
+
 export default function Hero() {
   const { config } = useConfig();
   const [bgLoaded, setBgLoaded] = useState(false);
-  const imgRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 640 : false
+  );
 
   const eyebrow   = config.hero_eyebrow    || 'Handcrafted in South India';
   const heading   = config.hero_heading    || 'Tanjore Paintings,\nGilded in Tradition.';
@@ -16,13 +23,23 @@ export default function Hero() {
   const cta1Link  = config.hero_cta1_link  || '/collections/all-tanjore-paintings';
   const cta2Label = config.hero_cta2_label || 'Shop Brass Idols';
   const cta2Link  = config.hero_cta2_link  || '/collections/brass-idols';
-  const bgImage   = config.hero_bg_image
-    ? (config.hero_bg_image.startsWith('http') ? config.hero_bg_image : `${API_BASE}/uploads/${config.hero_bg_image}`)
-    : null;
 
-  // Preload bg image
+  const desktopBg = resolveImg(config.hero_bg_image);
+  // Falls back to the desktop image if no mobile-specific one was uploaded
+  const mobileBg  = resolveImg(config.hero_bg_image_mobile) || desktopBg;
+  const bgImage   = isMobile ? mobileBg : desktopBg;
+
+  // Track viewport so we swap images on resize/rotate, not just on first load
   useEffect(() => {
-    if (!bgImage) return;
+    const onResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // Preload bg image — re-run whenever the resolved image changes (e.g. rotating the phone)
+  useEffect(() => {
+    if (!bgImage) { setBgLoaded(false); return; }
+    setBgLoaded(false);
     const img = new Image();
     img.src = bgImage;
     img.onload = () => setBgLoaded(true);

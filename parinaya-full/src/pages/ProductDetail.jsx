@@ -2,24 +2,28 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getProductById, getRelatedProducts } from '../services/api';
 import { useConfig } from '../hooks/useConfig';
+import { useCart } from '../context/CartContext';
 import ProductGallery from '../components/product/ProductGallery';
 import ProductCard from '../components/product/ProductCard';
 import Breadcrumb from '../components/ui/Breadcrumb';
 import { AccordionItem } from '../components/ui/Accordion';
 import WhatsAppButton from '../components/ui/WhatsAppButton';
-import { Truck, ShieldCheck } from 'lucide-react';
+import { Truck, ShieldCheck, ShoppingBag, Check } from 'lucide-react';
 
 export default function ProductDetail() {
   const { id } = useParams();
   const { config } = useConfig();
+  const { addToCart } = useCart();
   const [product, setProduct] = useState(null);
   const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [added, setAdded] = useState(false);
 
   useEffect(() => {
     setLoading(true);
     setNotFound(false);
+    setAdded(false);
     getProductById(id)
       .then((p) => {
         setProduct(p);
@@ -59,6 +63,12 @@ export default function ProductDetail() {
 
   const inStock = product.in_stock ?? product.inStock ?? true;
 
+  const handleAddToCart = () => {
+    addToCart(product);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       <Breadcrumb
@@ -95,6 +105,17 @@ export default function ProductDetail() {
               label="Enquire on WhatsApp"
               className="flex-1"
             />
+            <button
+              onClick={handleAddToCart}
+              disabled={!inStock}
+              className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-sm text-sm font-medium tracking-wide uppercase transition-colors
+                ${added
+                  ? 'bg-green-600 text-white'
+                  : 'bg-ink text-paper hover:bg-ink/90 disabled:opacity-40 disabled:cursor-not-allowed'}`}
+            >
+              {added ? <Check size={16} /> : <ShoppingBag size={16} />}
+              {added ? 'Added to Cart' : 'Add to Cart'}
+            </button>
           </div>
 
           <div className="flex flex-col gap-3 mb-8 text-sm text-ink/70">
