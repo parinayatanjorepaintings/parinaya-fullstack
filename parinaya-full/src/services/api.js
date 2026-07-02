@@ -1,7 +1,7 @@
 // Central API service — all data comes from the backend, no static files needed.
 // Set VITE_API_URL in .env.local (dev) or Vercel env vars (prod).
 
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const BASE = import.meta.env.VITE_API_URL || 'https://api.srisriparinaya.com';
 
 async function get(path) {
   const res = await fetch(`${BASE}${path}`);
