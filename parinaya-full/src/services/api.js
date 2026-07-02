@@ -17,13 +17,19 @@ export async function getSiteConfig() {
   return _cfg;
 }
 
-export async function buildWhatsAppLink(productName) {
+export async function buildWhatsAppLink(productName, productImage, productPrice) {
   const cfg = await getSiteConfig();
   const number = cfg.whatsapp_number || '917075703309';
   const base = `https://wa.me/${number}`;
   if (!productName) return base;
-  const text = encodeURIComponent(`Hi, I'm interested in "${productName}". Could you share more details?`);
-  return `${base}?text=${text}`;
+
+  let message = `Hi! I'm interested in purchasing this item from Sri Sri Parinaya:\n\n`;
+  message += `🛕 *${productName}*\n`;
+  if (productPrice) message += `💰 Price: ₹${Number(productPrice).toLocaleString('en-IN')}\n`;
+  if (productImage) message += `🖼️ Image: ${productImage}\n`;
+  message += `\nCould you please share more details and confirm availability?`;
+
+  return `${base}?text=${encodeURIComponent(message)}`;
 }
 
 // Builds a WhatsApp link listing every item currently in the cart, e.g.:

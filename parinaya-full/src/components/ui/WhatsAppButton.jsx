@@ -4,6 +4,8 @@ import { buildWhatsAppLink } from '../../services/api';
 
 export default function WhatsAppButton({
   productName,
+  productImage,
+  productPrice,
   label = 'Enquire on WhatsApp',
   variant = 'solid',
   className = '',
@@ -11,8 +13,10 @@ export default function WhatsAppButton({
   const [href, setHref] = useState('#');
 
   useEffect(() => {
-    buildWhatsAppLink(productName).then(setHref).catch(() => {});
-  }, [productName]);
+    buildWhatsAppLink(productName, productImage, productPrice)
+      .then(setHref)
+      .catch(() => {});
+  }, [productName, productImage, productPrice]);
 
   const base = 'inline-flex items-center justify-center gap-2 text-sm font-medium tracking-wide uppercase transition-colors duration-200 px-6 py-3';
   const styles = variant === 'solid'

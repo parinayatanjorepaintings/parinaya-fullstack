@@ -101,10 +101,12 @@ export default function ProductDetail() {
 
           <div className="flex flex-col sm:flex-row gap-3 mb-8">
             <WhatsAppButton
-              productName={product.name}
-              label="Enquire on WhatsApp"
-              className="flex-1"
-            />
+  productName={product.name}
+  productImage={imageUrls[0]}
+  productPrice={product.price}
+  label="Enquire on WhatsApp"
+  className="flex-1"
+/>
             <button
               onClick={handleAddToCart}
               disabled={!inStock}

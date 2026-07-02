@@ -13,7 +13,7 @@ export default function ProductCard({ product }) {
     : product.images?.[0]?.url || '';
 
   useEffect(() => {
-    buildWhatsAppLink(product.name).then(setWaHref).catch(() => {});
+    buildWhatsAppLink(product.name, imgSrc, product.price).then(setWaHref).catch(() => {});
   }, [product.name]);
 
   return (
