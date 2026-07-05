@@ -1,7 +1,3 @@
-// CartContext — a lightweight "enquiry cart". Items added here aren't a real
-// checkout cart (there's no payment flow); they're just a list of products
-// the customer is interested in, which gets sent as one WhatsApp message
-// when they tap the cart icon in the nav bar.
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const CartContext = createContext(null);
@@ -23,9 +19,7 @@ export function CartProvider({ children }) {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch {
-      // localStorage unavailable (e.g. private browsing) — fail silently, cart just won't persist
-    }
+    } catch {}
   }, [items]);
 
   const addToCart = useCallback((product, qty = 1) => {
@@ -36,7 +30,16 @@ export function CartProvider({ children }) {
           i.id === product.id ? { ...i, qty: i.qty + qty } : i
         );
       }
-      return [...prev, { id: product.id, name: product.name, price: product.price, qty }];
+      // Store image and price alongside name
+      const imgSrc = product.images?.[0]?.url || product.images?.[0] || '';
+      return [...prev, {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: imgSrc,
+        slug: product.slug,
+        qty,
+      }];
     });
   }, []);
 

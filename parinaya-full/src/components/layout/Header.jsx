@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, X, MessageCircle, ChevronDown, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
 import { useConfig } from '../../hooks/useConfig';
-import { getCategories, buildWhatsAppLink, buildWhatsAppLinkForCart } from '../../services/api';
+import { getCategories, buildWhatsAppLink } from '../../services/api';
 import { useCart } from '../../context/CartContext';
 import logo from '../../assets/logo.png';
 
@@ -15,20 +15,13 @@ export default function Header() {
   const navRef = useRef(null);
   const scrollInterval = useRef(null);
   const { config } = useConfig();
-  const { items: cartItems, cartCount } = useCart();
-
-  const handleCartClick = useCallback(async () => {
-    if (!cartItems.length) return; // nothing added yet — no-op
-    const url = await buildWhatsAppLinkForCart(cartItems);
-    window.open(url, '_blank', 'noopener,noreferrer');
-  }, [cartItems]);
+  const { cartCount } = useCart();
 
   useEffect(() => {
     getCategories().then(setCategories).catch(() => {});
     buildWhatsAppLink().then(setWaHref).catch(() => {});
   }, []);
 
-  // Check scroll state whenever categories load or window resizes
   const updateScrollState = useCallback(() => {
     const el = navRef.current;
     if (!el) return;
@@ -42,7 +35,6 @@ export default function Header() {
     return () => window.removeEventListener('resize', updateScrollState);
   }, [categories, updateScrollState]);
 
-  // Continuous scroll while arrow is held / hovered
   const startScroll = useCallback((dir) => {
     clearInterval(scrollInterval.current);
     scrollInterval.current = setInterval(() => {
@@ -57,25 +49,18 @@ export default function Header() {
     clearInterval(scrollInterval.current);
   }, []);
 
-  // Hover-to-scroll: when mouse is near the right/left edge of nav, scroll
   const handleNavMouseMove = useCallback((e) => {
     const el = navRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const edgeZone = 60; // px from edge that triggers auto-scroll
+    const edgeZone = 60;
     const xFromLeft  = e.clientX - rect.left;
     const xFromRight = rect.right - e.clientX;
     clearInterval(scrollInterval.current);
     if (xFromRight < edgeZone && canScrollR) {
-      scrollInterval.current = setInterval(() => {
-        el.scrollLeft += 5;
-        updateScrollState();
-      }, 16);
+      scrollInterval.current = setInterval(() => { el.scrollLeft += 5; updateScrollState(); }, 16);
     } else if (xFromLeft < edgeZone && canScrollL) {
-      scrollInterval.current = setInterval(() => {
-        el.scrollLeft -= 5;
-        updateScrollState();
-      }, 16);
+      scrollInterval.current = setInterval(() => { el.scrollLeft -= 5; updateScrollState(); }, 16);
     }
   }, [canScrollL, canScrollR, updateScrollState]);
 
@@ -86,46 +71,29 @@ export default function Header() {
     <header className="bg-paper sticky top-0 z-50 border-b border-line">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-          <button
-            className="lg:hidden p-2 -ml-2"
-            onClick={() => setMobileOpen(true)}
-            aria-label="Open menu"
-          >
+          <button className="lg:hidden p-2 -ml-2" onClick={() => setMobileOpen(true)} aria-label="Open menu">
             <Menu size={22} />
           </button>
 
           <Link to="/" className="flex items-center gap-2.5">
             <img src={logo} alt={logoText} className="h-12 sm:h-14 w-auto" />
             <span className="flex flex-col items-start">
-              <span className="font-display text-2xl sm:text-3xl tracking-wide text-ink leading-none">
-                {logoText}
-              </span>
-              <span className="text-[10px] tracking-widest2 uppercase text-gold-dark mt-1">
-                {logoSubtext}
-              </span>
+              <span className="font-display text-2xl sm:text-3xl tracking-wide text-ink leading-none">{logoText}</span>
+              <span className="text-[10px] tracking-widest2 uppercase text-gold-dark mt-1">{logoSubtext}</span>
             </span>
           </Link>
 
           <div className="flex items-center gap-4">
-            <Link
-              to="/pages/contact"
-              className="hidden sm:inline text-xs tracking-widest2 uppercase text-ink hover:text-gold-dark transition-colors"
-            >
+            <Link to="/pages/contact" className="hidden sm:inline text-xs tracking-widest2 uppercase text-ink hover:text-gold-dark transition-colors">
               Contact
             </Link>
-            <a
-              href={waHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Chat on WhatsApp"
-              className="p-2 hover:text-gold-dark transition-colors"
-            >
+            <a href={waHref} target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp" className="p-2 hover:text-gold-dark transition-colors">
               <MessageCircle size={19} />
             </a>
-            <button
-              onClick={handleCartClick}
-              aria-label="Send enquiry for added products via WhatsApp"
-              title={cartCount ? 'Send your selected products via WhatsApp' : 'Add products to enquire via WhatsApp'}
+            {/* Cart icon — links to /cart page */}
+            <Link
+              to="/cart"
+              aria-label="View enquiry cart"
               className="relative p-2 hover:text-gold-dark transition-colors"
             >
               <ShoppingBag size={19} />
@@ -134,76 +102,50 @@ export default function Header() {
                   {cartCount}
                 </span>
               )}
-            </button>
+            </Link>
           </div>
         </div>
 
-        {/* Desktop nav with arrow scroll buttons */}
+        {/* Desktop nav */}
         <div className="hidden lg:flex items-center border-t border-line h-12 relative">
-          {/* Left arrow */}
           <button
             aria-label="Scroll left"
-            onMouseEnter={() => startScroll(-1)}
-            onMouseLeave={stopScroll}
-            onMouseDown={() => startScroll(-1)}
-            onMouseUp={stopScroll}
+            onMouseEnter={() => startScroll(-1)} onMouseLeave={stopScroll}
+            onMouseDown={() => startScroll(-1)} onMouseUp={stopScroll}
             onClick={() => { navRef.current && (navRef.current.scrollLeft -= 120); updateScrollState(); }}
-            className={`flex-shrink-0 h-full px-2 flex items-center text-ink/40 hover:text-gold-dark transition-all duration-200 ${
-              canScrollL ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`}
+            className={`flex-shrink-0 h-full px-2 flex items-center text-ink/40 hover:text-gold-dark transition-all duration-200 ${canScrollL ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           >
             <ChevronLeft size={16} />
           </button>
 
-          {/* Scrollable nav */}
           <nav
-            ref={navRef}
-            onScroll={updateScrollState}
-            onMouseMove={handleNavMouseMove}
-            onMouseLeave={stopScroll}
+            ref={navRef} onScroll={updateScrollState}
+            onMouseMove={handleNavMouseMove} onMouseLeave={stopScroll}
             className="flex items-center gap-7 h-full flex-1 overflow-x-auto px-1"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             <style>{`nav::-webkit-scrollbar { display: none; }`}</style>
-            <Link
-              to="/"
-              className="flex-shrink-0 text-xs tracking-widest2 uppercase text-ink hover:text-gold-dark transition-colors"
-            >
-              Home
-            </Link>
+            <Link to="/" className="flex-shrink-0 text-xs tracking-widest2 uppercase text-ink hover:text-gold-dark transition-colors">Home</Link>
             {categories.map((cat) => (
-              <Link
-                key={cat.id}
-                to={`/collections/${cat.slug}`}
-                className="flex-shrink-0 text-xs tracking-widest2 uppercase text-ink hover:text-gold-dark transition-colors whitespace-nowrap"
-              >
+              <Link key={cat.id} to={`/collections/${cat.slug}`}
+                className="flex-shrink-0 text-xs tracking-widest2 uppercase text-ink hover:text-gold-dark transition-colors whitespace-nowrap">
                 {cat.name}
               </Link>
             ))}
           </nav>
 
-          {/* Right arrow */}
           <button
             aria-label="Scroll right"
-            onMouseEnter={() => startScroll(1)}
-            onMouseLeave={stopScroll}
-            onMouseDown={() => startScroll(1)}
-            onMouseUp={stopScroll}
+            onMouseEnter={() => startScroll(1)} onMouseLeave={stopScroll}
+            onMouseDown={() => startScroll(1)} onMouseUp={stopScroll}
             onClick={() => { navRef.current && (navRef.current.scrollLeft += 120); updateScrollState(); }}
-            className={`flex-shrink-0 h-full px-2 flex items-center text-ink/40 hover:text-gold-dark transition-all duration-200 ${
-              canScrollR ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`}
+            className={`flex-shrink-0 h-full px-2 flex items-center text-ink/40 hover:text-gold-dark transition-all duration-200 ${canScrollR ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           >
             <ChevronRight size={16} />
           </button>
 
-          {/* Fade gradients to hint more content */}
-          {canScrollL && (
-            <div className="pointer-events-none absolute left-7 top-0 bottom-0 w-8 bg-gradient-to-r from-paper to-transparent z-10" />
-          )}
-          {canScrollR && (
-            <div className="pointer-events-none absolute right-7 top-0 bottom-0 w-8 bg-gradient-to-l from-paper to-transparent z-10" />
-          )}
+          {canScrollL && <div className="pointer-events-none absolute left-7 top-0 bottom-0 w-8 bg-gradient-to-r from-paper to-transparent z-10" />}
+          {canScrollR && <div className="pointer-events-none absolute right-7 top-0 bottom-0 w-8 bg-gradient-to-l from-paper to-transparent z-10" />}
         </div>
       </div>
 
@@ -220,25 +162,20 @@ export default function Header() {
               <button onClick={() => setMobileOpen(false)} aria-label="Close menu"><X size={22} /></button>
             </div>
             <nav className="flex flex-col">
-              <Link to="/" onClick={() => setMobileOpen(false)}
-                className="px-5 py-4 border-b border-line text-sm uppercase tracking-wide">Home</Link>
+              <Link to="/" onClick={() => setMobileOpen(false)} className="px-5 py-4 border-b border-line text-sm uppercase tracking-wide">Home</Link>
               {categories.map((cat) => (
-                <Link key={cat.id} to={`/collections/${cat.slug}`}
-                  onClick={() => setMobileOpen(false)}
+                <Link key={cat.id} to={`/collections/${cat.slug}`} onClick={() => setMobileOpen(false)}
                   className="px-5 py-4 border-b border-line text-sm uppercase tracking-wide flex items-center justify-between">
                   {cat.name}
                   <ChevronDown size={14} className="-rotate-90 text-line" />
                 </Link>
               ))}
-              <Link to="/pages/contact" onClick={() => setMobileOpen(false)}
-                className="px-5 py-4 border-b border-line text-sm uppercase tracking-wide">Contact Us</Link>
-              <button
-                onClick={() => { setMobileOpen(false); handleCartClick(); }}
-                className="px-5 py-4 border-b border-line text-sm uppercase tracking-wide flex items-center gap-2 text-left w-full"
-              >
+              <Link to="/pages/contact" onClick={() => setMobileOpen(false)} className="px-5 py-4 border-b border-line text-sm uppercase tracking-wide">Contact Us</Link>
+              <Link to="/cart" onClick={() => setMobileOpen(false)}
+                className="px-5 py-4 border-b border-line text-sm uppercase tracking-wide flex items-center gap-2">
                 <ShoppingBag size={16} />
-                Send Enquiry ({cartCount} added)
-              </button>
+                Enquiry Cart {cartCount > 0 && `(${cartCount})`}
+              </Link>
               <a href={waHref} target="_blank" rel="noopener noreferrer"
                 className="px-5 py-4 text-sm uppercase tracking-wide flex items-center gap-2 text-gold-dark">
                 <MessageCircle size={16} /> Chat on WhatsApp
