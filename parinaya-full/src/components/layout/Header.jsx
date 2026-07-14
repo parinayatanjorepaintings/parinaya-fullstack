@@ -7,13 +7,16 @@ import { useCart } from '../../context/CartContext';
 import logo from '../../assets/logo.png';
 
 export default function Header() {
-  const [mobileOpen, setMobileOpen]   = useState(false);
-  const [categories, setCategories]   = useState([]);
-  const [waHref, setWaHref]           = useState('https://wa.me/917075703309');
-  const [canScrollL, setCanScrollL]   = useState(false);
-  const [canScrollR, setCanScrollR]   = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [waHref, setWaHref]         = useState('https://wa.me/917075703309');
+  const [canScrollL, setCanScrollL] = useState(false);
+  const [canScrollR, setCanScrollR] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState(null); // cat id with open dropdown
+  const [mobileExpanded, setMobileExpanded] = useState({}); // { [id]: bool }
   const navRef = useRef(null);
   const scrollInterval = useRef(null);
+  const dropdownTimer = useRef(null);
   const { config } = useConfig();
   const { cartCount } = useCart();
 
@@ -38,16 +41,11 @@ export default function Header() {
   const startScroll = useCallback((dir) => {
     clearInterval(scrollInterval.current);
     scrollInterval.current = setInterval(() => {
-      if (navRef.current) {
-        navRef.current.scrollLeft += dir * 6;
-        updateScrollState();
-      }
+      if (navRef.current) { navRef.current.scrollLeft += dir * 6; updateScrollState(); }
     }, 16);
   }, [updateScrollState]);
 
-  const stopScroll = useCallback(() => {
-    clearInterval(scrollInterval.current);
-  }, []);
+  const stopScroll = useCallback(() => clearInterval(scrollInterval.current), []);
 
   const handleNavMouseMove = useCallback((e) => {
     const el = navRef.current;
@@ -63,6 +61,15 @@ export default function Header() {
       scrollInterval.current = setInterval(() => { el.scrollLeft -= 5; updateScrollState(); }, 16);
     }
   }, [canScrollL, canScrollR, updateScrollState]);
+
+  // Hover dropdown handlers with small delay to avoid flicker
+  const handleCatEnter = (id) => {
+    clearTimeout(dropdownTimer.current);
+    setOpenDropdown(id);
+  };
+  const handleCatLeave = () => {
+    dropdownTimer.current = setTimeout(() => setOpenDropdown(null), 150);
+  };
 
   const logoText    = config.logo_text    || 'Parinaya';
   const logoSubtext = config.logo_subtext || 'TANJORE PAINTINGS';
@@ -90,12 +97,7 @@ export default function Header() {
             <a href={waHref} target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp" className="p-2 hover:text-gold-dark transition-colors">
               <MessageCircle size={19} />
             </a>
-            {/* Cart icon — links to /cart page */}
-            <Link
-              to="/cart"
-              aria-label="View enquiry cart"
-              className="relative p-2 hover:text-gold-dark transition-colors"
-            >
+            <Link to="/cart" aria-label="View enquiry cart" className="relative p-2 hover:text-gold-dark transition-colors">
               <ShoppingBag size={19} />
               {cartCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-gold-dark text-paper text-[10px] font-semibold leading-none rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
@@ -111,7 +113,6 @@ export default function Header() {
           <button
             aria-label="Scroll left"
             onMouseEnter={() => startScroll(-1)} onMouseLeave={stopScroll}
-            onMouseDown={() => startScroll(-1)} onMouseUp={stopScroll}
             onClick={() => { navRef.current && (navRef.current.scrollLeft -= 120); updateScrollState(); }}
             className={`flex-shrink-0 h-full px-2 flex items-center text-ink/40 hover:text-gold-dark transition-all duration-200 ${canScrollL ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           >
@@ -120,24 +121,57 @@ export default function Header() {
 
           <nav
             ref={navRef} onScroll={updateScrollState}
-            onMouseMove={handleNavMouseMove} onMouseLeave={stopScroll}
+            onMouseMove={handleNavMouseMove} onMouseLeave={() => { stopScroll(); }}
             className="flex items-center gap-7 h-full flex-1 overflow-x-auto px-1"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             <style>{`nav::-webkit-scrollbar { display: none; }`}</style>
-            <Link to="/" className="flex-shrink-0 text-xs tracking-widest2 uppercase text-ink hover:text-gold-dark transition-colors">Home</Link>
+            <Link to="/" className="flex-shrink-0 text-xs tracking-widest2 uppercase text-ink hover:text-gold-dark transition-colors">
+              Home
+            </Link>
+
             {categories.map((cat) => (
-              <Link key={cat.id} to={`/collections/${cat.slug}`}
-                className="flex-shrink-0 text-xs tracking-widest2 uppercase text-ink hover:text-gold-dark transition-colors whitespace-nowrap">
-                {cat.name}
-              </Link>
+              <div
+                key={cat.id}
+                className="relative flex-shrink-0 h-full flex items-center"
+                onMouseEnter={() => cat.subcategories?.length ? handleCatEnter(cat.id) : null}
+                onMouseLeave={handleCatLeave}
+              >
+                <Link
+                  to={`/collections/${cat.slug}`}
+                  className="flex items-center gap-1 text-xs tracking-widest2 uppercase text-ink hover:text-gold-dark transition-colors whitespace-nowrap"
+                >
+                  {cat.name}
+                  {cat.subcategories?.length > 0 && (
+                    <ChevronDown size={11} className={`transition-transform duration-200 ${openDropdown === cat.id ? 'rotate-180' : ''}`} />
+                  )}
+                </Link>
+
+                {/* Dropdown for subcategories */}
+                {cat.subcategories?.length > 0 && openDropdown === cat.id && (
+                  <div
+                    className="absolute top-full left-0 mt-0 bg-paper border border-line shadow-md min-w-[200px] z-50"
+                    onMouseEnter={() => handleCatEnter(cat.id)}
+                    onMouseLeave={handleCatLeave}
+                  >
+                    {cat.subcategories.map((sub) => (
+                      <Link
+                        key={sub.id}
+                        to={`/collections/${sub.slug}`}
+                        className="block px-4 py-2.5 text-xs tracking-wide uppercase text-ink hover:bg-cream hover:text-gold-dark transition-colors border-b border-line last:border-0"
+                      >
+                        {sub.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </nav>
 
           <button
             aria-label="Scroll right"
             onMouseEnter={() => startScroll(1)} onMouseLeave={stopScroll}
-            onMouseDown={() => startScroll(1)} onMouseUp={stopScroll}
             onClick={() => { navRef.current && (navRef.current.scrollLeft += 120); updateScrollState(); }}
             className={`flex-shrink-0 h-full px-2 flex items-center text-ink/40 hover:text-gold-dark transition-all duration-200 ${canScrollR ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           >
@@ -163,21 +197,49 @@ export default function Header() {
             </div>
             <nav className="flex flex-col">
               <Link to="/" onClick={() => setMobileOpen(false)} className="px-5 py-4 border-b border-line text-sm uppercase tracking-wide">Home</Link>
+
               {categories.map((cat) => (
-                <Link key={cat.id} to={`/collections/${cat.slug}`} onClick={() => setMobileOpen(false)}
-                  className="px-5 py-4 border-b border-line text-sm uppercase tracking-wide flex items-center justify-between">
-                  {cat.name}
-                  <ChevronDown size={14} className="-rotate-90 text-line" />
-                </Link>
+                <div key={cat.id}>
+                  <div className="flex items-center border-b border-line">
+                    <Link
+                      to={`/collections/${cat.slug}`}
+                      onClick={() => setMobileOpen(false)}
+                      className="flex-1 px-5 py-4 text-sm uppercase tracking-wide"
+                    >
+                      {cat.name}
+                    </Link>
+                    {cat.subcategories?.length > 0 && (
+                      <button
+                        className="px-4 py-4 text-ink/40"
+                        onClick={() => setMobileExpanded(prev => ({ ...prev, [cat.id]: !prev[cat.id] }))}
+                      >
+                        <ChevronDown size={16} className={`transition-transform ${mobileExpanded[cat.id] ? 'rotate-180' : ''}`} />
+                      </button>
+                    )}
+                  </div>
+                  {/* Subcategories expanded */}
+                  {cat.subcategories?.length > 0 && mobileExpanded[cat.id] && (
+                    <div className="bg-cream">
+                      {cat.subcategories.map((sub) => (
+                        <Link
+                          key={sub.id}
+                          to={`/collections/${sub.slug}`}
+                          onClick={() => setMobileOpen(false)}
+                          className="flex items-center gap-2 px-8 py-3 border-b border-line text-sm text-ink/70 uppercase tracking-wide"
+                        >
+                          <span className="text-ink/30">└</span> {sub.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
+
               <Link to="/pages/contact" onClick={() => setMobileOpen(false)} className="px-5 py-4 border-b border-line text-sm uppercase tracking-wide">Contact Us</Link>
-              <Link to="/cart" onClick={() => setMobileOpen(false)}
-                className="px-5 py-4 border-b border-line text-sm uppercase tracking-wide flex items-center gap-2">
-                <ShoppingBag size={16} />
-                Enquiry Cart {cartCount > 0 && `(${cartCount})`}
+              <Link to="/cart" onClick={() => setMobileOpen(false)} className="px-5 py-4 border-b border-line text-sm uppercase tracking-wide flex items-center gap-2">
+                <ShoppingBag size={16} /> Enquiry Cart {cartCount > 0 && `(${cartCount})`}
               </Link>
-              <a href={waHref} target="_blank" rel="noopener noreferrer"
-                className="px-5 py-4 text-sm uppercase tracking-wide flex items-center gap-2 text-gold-dark">
+              <a href={waHref} target="_blank" rel="noopener noreferrer" className="px-5 py-4 text-sm uppercase tracking-wide flex items-center gap-2 text-gold-dark">
                 <MessageCircle size={16} /> Chat on WhatsApp
               </a>
             </nav>
