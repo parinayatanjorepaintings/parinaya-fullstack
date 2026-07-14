@@ -60,3 +60,7 @@ export async function getProductById(id) {
 export async function getRelatedProducts(id) {
   return get(`/api/products/${id}/related`);
 }
+// ─── YouTube Videos ───────────────────────────────────────────────────────────
+export async function getYoutubeVideos() {
+  return get('/api/youtube-videos');
+}
