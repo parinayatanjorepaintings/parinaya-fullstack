@@ -7,7 +7,6 @@ export default function ProductCard({ product }) {
   const [waHref, setWaHref] = useState('#');
   const price = product.price?.toLocaleString('en-IN');
 
-  // Images from API are objects { url, ... }; support both string and object
   const imgSrc = typeof product.images?.[0] === 'string'
     ? product.images[0]
     : product.images?.[0]?.url || '';
@@ -20,17 +19,19 @@ export default function ProductCard({ product }) {
     <div className="group flex flex-col">
       <Link
         to={`/products/${product.id}`}
-        className="relative block aspect-[4/5] overflow-hidden bg-cream border border-line"
+        className="relative block overflow-hidden bg-cream border border-line"
+        style={{ minHeight: '260px' }}
       >
         {imgSrc ? (
           <img
             src={imgSrc}
             alt={product.name}
             loading="lazy"
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-[1.03]"
+            style={{ display: 'block', maxHeight: '360px', minHeight: '220px' }}
           />
         ) : (
-          <div className="w-full h-full bg-cream flex items-center justify-center text-ink/20 text-xs">
+          <div className="w-full bg-cream flex items-center justify-center text-ink/20 text-xs" style={{ height: '280px' }}>
             No image
           </div>
         )}
